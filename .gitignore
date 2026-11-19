@@ -1,0 +1,31 @@
+# Secrets (real values live only in these files)
+.env
+.env.test
+.env.demo
+**/.env
+
+# Test and demo output
+e2e-results/
+videos/
+test-results/
+playwright-report/
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+target/
+
+# Local run state (PID files and logs from scripts/start.ps1)
+.run/
+
+# Editors and OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+.env*
+
+# Playwright slot locks (e2e/)
+e2e/.slots/

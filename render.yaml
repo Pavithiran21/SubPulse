@@ -1,0 +1,64 @@
+# Render Blueprint: one free web service from the Dockerfile (Spring Boot API + built frontend, one origin).
+# The database is a hosted MySQL 8.4 (e.g. Aiven's free MySQL) with a subpulse_demo database. Aiven
+# accepts only TLS, so set SPRING_DATASOURCE_URL to
+#   jdbc:mysql://<host>:<port>/subpulse_demo?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&sslMode=REQUIRED
+# Then run once from the service's Shell:
+#   java -jar /app/app.jar --spring.profiles.active=seed-demo --spring.main.web-application-type=none
+# Free services sleep after 15 minutes without traffic, and the in-process reminder job only runs while
+# awake, so point an external cron (e.g. cron-job.org, every 15 minutes) at POST /api/internal/jobs/reminders
+# with the X-Job-Secret header.
+services:
+  - type: web
+    name: subpulse
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SERVER_FORWARD_HEADERS_STRATEGY
+        value: native # trust Render's proxy, so rate limits see the visitor's IP
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DEMO_MODE
+        value: 'true'
+      - key: RATE_LIMITS_ENABLED
+        value: 'true'
+      - key: DB_NAME
+        value: subpulse_demo
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JOB_TRIGGER_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false # https://<service>.onrender.com
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: DEMO_SMTP_HOST
+        sync: false
+      - key: DEMO_SMTP_PORT
+        sync: false
+      - key: DEMO_SMTP_USER
+        sync: false
+      - key: DEMO_SMTP_PASS
+        sync: false

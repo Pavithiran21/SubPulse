@@ -1,0 +1,55 @@
+# SubPulse on your machine in one command:
+#
+#   docker compose up --build
+#   docker compose exec app java -jar /app/app.jar --spring.profiles.active=seed-demo --spring.main.web-application-type=none
+#
+# then open http://localhost:4000 and use "Log in as User" (password DEMO_PASSWORD below).
+# The demo seed creates user@demo.subpulse.test with a year of subscriptions, including a plan started
+# on 31 January. Set SMTP_* (e.g. a free Ethereal inbox) to see the reminder emails.
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: subpulse-local-root
+      MYSQL_DATABASE: subpulse_demo
+    volumes:
+      - subpulse-mysql:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-psubpulse-local-root']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '4000:4000'
+    environment:
+      APP_ENV: development
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: subpulse_demo
+      DB_USER: root
+      DB_PASSWORD: subpulse-local-root
+      JWT_SECRET: local-only-secret-change-me-0123456789abcdef
+      JOB_TRIGGER_SECRET: local-only-job-secret-change-me-0123456789
+      FRONTEND_URL: http://localhost:4000
+      DEMO_MODE: 'true'
+      DEMO_PASSWORD: subpulse-demo-1
+      SMTP_HOST: ${SMTP_HOST:-smtp.ethereal.email}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-set-me}
+      SMTP_PASS: ${SMTP_PASS:-set-me}
+      SMTP_FROM: ${SMTP_FROM:-SubPulse <reminders@subpulse.test>}
+      # The demo accounts' mail goes to its own inbox (required while DEMO_MODE is true).
+      DEMO_SMTP_HOST: ${DEMO_SMTP_HOST:-smtp.ethereal.email}
+      DEMO_SMTP_PORT: ${DEMO_SMTP_PORT:-587}
+      DEMO_SMTP_USER: ${DEMO_SMTP_USER:-set-me}
+      DEMO_SMTP_PASS: ${DEMO_SMTP_PASS:-set-me}
+
+volumes:
+  subpulse-mysql:

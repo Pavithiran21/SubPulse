@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build, lint and Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-root-password"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+
+      - name: Install
+        run: |
+          npm ci --prefix frontend
+          npm ci --prefix e2e
+
+      - name: Lint and build the frontend
+        run: |
+          npm run lint --prefix frontend
+          npm run build --prefix frontend
+
+      # CI's own backend/.env (a properties file: no quotes). e2e/make-env.js copies it to .env.test with
+      # subpulse_test, new secrets, the reminder schedule off and two new Ethereal inboxes.
+      # Nothing here is a real secret.
+      - name: Write backend/.env
+        run: |
+          cat > backend/.env <<EOF
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_NAME=subpulse
+          DB_USER=root
+          DB_PASSWORD=ci-root-password
+          APP_ENV=development
+          PORT=4000
+          FRONTEND_URL=http://localhost:5173
+          JWT_SECRET=$(openssl rand -hex 32)
+          JOB_TRIGGER_SECRET=$(openssl rand -hex 32)
+          DEMO_MODE=true
+          DEMO_PASSWORD=ci-demo-password-1
+          SMTP_HOST=smtp.ethereal.email
+          SMTP_PORT=587
+          SMTP_USER=replaced-by-make-env
+          SMTP_PASS=replaced-by-make-env
+          SMTP_FROM=SubPulse <reminders@subpulse.test>
+          EOF
+          chmod +x backend/mvnw
+
+      - name: Install Chromium
+        run: npx --prefix e2e playwright install --with-deps chromium
+
+      # prepare.js builds the jar (mvnw package), creates and seeds subpulse_test, then Playwright runs.
+      - name: Playwright (API + browser)
+        working-directory: e2e
+        env:
+          CI: 'true'
+        run: npm test
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+
+  docker:
+    name: Docker image starts and serves the app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: subpulse_demo
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-root-password"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build
+        run: docker build -t subpulse .
+      - name: Run (Flyway on start), seed the demo, check the page and the API
+        run: |
+          ENVS="-e PORT=4000 -e APP_ENV=production -e DB_HOST=127.0.0.1 -e DB_PORT=3306 -e DB_NAME=subpulse_demo \
+            -e DB_USER=root -e DB_PASSWORD=ci-root-password \
+            -e JWT_SECRET=$(openssl rand -hex 32) -e JOB_TRIGGER_SECRET=$(openssl rand -hex 32) \
+            -e FRONTEND_URL=http://127.0.0.1:4000 -e SMTP_HOST=smtp.ethereal.email -e SMTP_PORT=587 \
+            -e SMTP_USER=none -e SMTP_PASS=none -e DEMO_MODE=true -e DEMO_PASSWORD=ci-demo-password-1 \
+            -e DEMO_SMTP_HOST=smtp.ethereal.email -e DEMO_SMTP_PORT=587 -e DEMO_SMTP_USER=none -e DEMO_SMTP_PASS=none"
+          docker run -d --name app --network host $ENVS subpulse
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:4000/api/health && break; sleep 2; done
+          curl -fs http://127.0.0.1:4000/api/health
+          curl -fs http://127.0.0.1:4000/ | grep -q '<div id="root">'
+          curl -fs http://127.0.0.1:4000/subscriptions | grep -q '<div id="root">'
+          docker run --rm --network host $ENVS subpulse java -jar /app/app.jar --spring.profiles.active=seed-demo --spring.main.web-application-type=none
+          curl -fs http://127.0.0.1:4000/api/demo | grep -q 'user@demo.subpulse.test'
+      - name: Container log
+        if: always()
+        run: docker logs app || true

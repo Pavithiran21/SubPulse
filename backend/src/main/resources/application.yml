@@ -1,0 +1,81 @@
+# Every value comes from backend/.env (or the file named by ENV_FILE, for example ../.env.test).
+# The file is read as a properties file; real environment variables win over it.
+spring:
+  application:
+    name: subpulse-backend
+  config:
+    import: optional:file:${ENV_FILE:.env}[.properties]
+  main:
+    banner-mode: off
+  datasource:
+    # The password is passed on its own, never inside the URL (it may contain '@').
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only checks that the entities match it.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USER}
+    password: ${SMTP_PASS}
+    properties:
+      # Jakarta Mail builds each Message-ID from this address's domain; without it, it uses this
+      # machine's host name, which every recipient would see in the email's headers.
+      mail.from: ${SMTP_FROM:SubPulse <reminders@subpulse.test>}
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      # Connect within 10 s; then allow 30 s per SMTP reply or write. Ethereal's free server takes
+      # about 5-6 s per message and sometimes more than 10 s; Brevo's relay can be slow too.
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 30000
+      mail.smtp.writetimeout: 30000
+  thymeleaf:
+    prefix: classpath:/templates/
+  web:
+    error:
+      whitelabel:
+        enabled: false
+
+server:
+  port: ${PORT:4000}
+  error:
+    include-stacktrace: never
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    # Hibernate logs the text of every SQL error, and "Duplicate entry 'name@example.com'" would put
+    # an email address in the log. GlobalExceptionHandler and the services log a safe line instead.
+    # Hibernate 7 logs these under org.hibernate.orm.jdbc.error (SqlExceptionHelper in Hibernate 6).
+    org.hibernate.orm.jdbc.error: OFF
+  pattern:
+    level: "%5p [%X{requestId:-}]"
+
+app:
+  env: ${APP_ENV:development}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  jwt-secret: ${JWT_SECRET:}
+  job-trigger-secret: ${JOB_TRIGGER_SECRET:}
+  mail-from: ${SMTP_FROM:SubPulse <reminders@subpulse.test>}
+  rate-limits-enabled: ${RATE_LIMITS_ENABLED:true}
+  demo-mode: ${DEMO_MODE:false}
+  demo-password: ${DEMO_PASSWORD:}
+  job-time-override-enabled: ${JOB_TIME_OVERRIDE_ENABLED:false}
+  # Every 15 minutes, because some time zones are offset by 30 or 45 minutes. "-" turns it off.
+  reminder-cron: ${REMINDER_CRON:0 */15 * * * *}
+  # Emails to @demo.subpulse.test go to this Ethereal inbox, never through SMTP_* (Brevo).
+  demo-smtp:
+    host: ${DEMO_SMTP_HOST:}
+    port: ${DEMO_SMTP_PORT:587}
+    user: ${DEMO_SMTP_USER:}
+    pass: ${DEMO_SMTP_PASS:}

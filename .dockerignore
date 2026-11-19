@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/target
+**/.env*
+e2e/
+videos/
+.git/
+.github/
