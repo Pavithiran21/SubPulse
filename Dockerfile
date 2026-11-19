@@ -23,7 +23,7 @@ FROM eclipse-temurin:21-jre-alpine
 ENV PORT=4000 \
     STATIC_DIR=/app/public \
     APP_ENV=production \
-    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k"
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1"
 WORKDIR /app
 COPY --from=api /app/backend/target/subpulse-backend.jar app.jar
 COPY --from=web /app/frontend/dist /app/public

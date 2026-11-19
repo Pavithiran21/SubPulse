@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/Pavithiran21/SubPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavithiran21/SubPulse/actions/workflows/ci.yml)
 
+**Live demo: [subpulse-pavithiran.onrender.com](https://subpulse-pavithiran.onrender.com)** (the Log in page has a one-click demo account). It runs on free hosting, so the first load after a quiet spell can take a minute or two.
+
 A subscription tracker that warns you before you are charged. You keep every streaming, software, gym and cloud subscription in one place, see what you spend each month and year, and get an email a few days before each renewal, on the days you choose.
 
 **Java 21 · Spring Boot 4 · MySQL 8.4 · Flyway · React 19 · TanStack Query · Tailwind CSS 4 · Playwright**
@@ -149,10 +151,12 @@ npm test        # writes .env.test, creates and seeds subpulse_test, builds the 
 
 One free [Render](https://render.com) web service from the `Dockerfile` (see [`render.yaml`](render.yaml)): Spring Boot serves the built frontend, so the app, the API and the refresh cookie share one origin, with no CORS or cross-site cookies. Flyway creates the tables on every start.
 
-- **Database:** a hosted MySQL 8.4 such as Aiven's free plan. Create a `subpulse_demo` database and set `DB_*` and `SPRING_DATASOURCE_URL` (with `sslMode=REQUIRED`).
+- **Database:** a free hosted MySQL-compatible database such as [TiDB Cloud](https://tidbcloud.com) Starter. Create a `subpulse_demo` database and set `DB_*` and `SPRING_DATASOURCE_URL` (with `sslMode=VERIFY_IDENTITY`). The whole Playwright suite, including the three-runs-at-once reminder test, passes on it.
 - **Settings:** `APP_ENV=production`, `SERVER_FORWARD_HEADERS_STRATEGY=native`, `DEMO_MODE=true`, `FRONTEND_URL` = the service URL, and SMTP for real mail (Brevo) plus `DEMO_SMTP_*` (Ethereal) for the demo account's mail.
-- **Demo data:** run the `seed-demo` profile once from the service's Shell.
+- **Demo data:** free Render has no Shell, so run the `seed-demo` profile once from your own machine, pointed at the same database.
+- **Memory:** the image caps the JVM so the app stays near 340 MB under load, inside the free plan's 512 MB.
 - **Reminders on a free plan:** a sleeping service runs no jobs, so point an external cron (for example cron-job.org, every 15 minutes) at `POST /api/internal/jobs/reminders` with the `X-Job-Secret` header.
+- **Email on free hosting:** Render's free plan blocks outbound SMTP, so the live demo sends no reminder or password-reset email; everything else works. Paid hosting or an email provider with an HTTPS API would lift this.
 
 Free services sleep after 15 minutes without traffic, so the first visit after that takes about a minute.
 

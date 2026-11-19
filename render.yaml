@@ -1,15 +1,18 @@
 # Render Blueprint: one free web service from the Dockerfile (Spring Boot API + built frontend, one origin).
-# The database is a hosted MySQL 8.4 (e.g. Aiven's free MySQL) with a subpulse_demo database. Aiven
-# accepts only TLS, so set SPRING_DATASOURCE_URL to
-#   jdbc:mysql://<host>:<port>/subpulse_demo?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&sslMode=REQUIRED
-# Then run once from the service's Shell:
-#   java -jar /app/app.jar --spring.profiles.active=seed-demo --spring.main.web-application-type=none
+# The database is TiDB Cloud Starter (free, MySQL-compatible) with a subpulse_demo database. It accepts only
+# TLS, so set SPRING_DATASOURCE_URL to
+#   jdbc:mysql://<host>:4000/subpulse_demo?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&sslMode=VERIFY_IDENTITY
+# (Java already trusts its certificate authority). Flyway creates the tables on the first start.
+# Free Render services have no Shell, so seed the demo data once from your own machine, with the same
+# database settings (and ENV_FILE pointing at an env file that ends in /subpulse_demo):
+#   java -jar backend/target/subpulse-backend.jar --spring.profiles.active=seed-demo --spring.main.web-application-type=none
+# Free Render also blocks outbound SMTP (ports 25, 465, 587), so no reminder or password-reset email is sent.
 # Free services sleep after 15 minutes without traffic, and the in-process reminder job only runs while
 # awake, so point an external cron (e.g. cron-job.org, every 15 minutes) at POST /api/internal/jobs/reminders
 # with the X-Job-Secret header.
 services:
   - type: web
-    name: subpulse
+    name: subpulse-pavithiran
     runtime: docker
     plan: free
     healthCheckPath: /api/health
