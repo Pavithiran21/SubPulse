@@ -1,0 +1,26 @@
+# The API only, for Render. The React app is hosted on Vercel, which forwards /api to this service
+# (see frontend/vercel.json), so the browser still sees one origin and the refresh cookie keeps working.
+# The full image (API + built frontend on one origin) is the Dockerfile, used by docker-compose and CI.
+
+# 1. Build the API jar (dependencies first, so they are cached between builds).
+FROM eclipse-temurin:21-jdk AS api
+WORKDIR /app/backend
+COPY backend/mvnw backend/pom.xml ./
+COPY backend/.mvn .mvn
+RUN chmod +x mvnw && ./mvnw -q -B dependency:go-offline
+COPY backend/src src
+RUN ./mvnw -q -B -DskipTests package
+
+# 2. A small Java 21 runtime with the jar.
+FROM eclipse-temurin:21-jre-alpine
+ENV PORT=4000 \
+    APP_ENV=production \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1"
+WORKDIR /app
+COPY --from=api /app/backend/target/subpulse-backend.jar app.jar
+RUN addgroup -S app && adduser -S app -G app
+USER app
+EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD wget -qO- http://127.0.0.1:${PORT}/api/health || exit 1
+# Flyway brings the schema up to date on every start.
+CMD ["java", "-jar", "/app/app.jar"]
