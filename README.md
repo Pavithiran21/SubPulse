@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Pavithiran21/SubPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/Pavithiran21/SubPulse/actions/workflows/ci.yml)
 
-**Live demo: [subpulse-pavithiran.onrender.com](https://subpulse-pavithiran.onrender.com)** (the Log in page has a one-click demo account). It runs on free hosting, so the first load after a quiet spell can take a minute or two.
+**Live demo: [sub-pulse-omega.vercel.app](https://sub-pulse-omega.vercel.app)** (the Log in page has a one-click demo account). It runs on free hosting, so the first load after a quiet spell can take a minute or two.
 
 A subscription tracker that warns you before you are charged. You keep every streaming, software, gym and cloud subscription in one place, see what you spend each month and year, and get an email a few days before each renewal, on the days you choose.
 
