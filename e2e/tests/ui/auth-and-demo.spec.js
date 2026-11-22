@@ -45,11 +45,14 @@ test('create account in the browser opens an empty calendar; log out returns to 
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('the demo account logs in with one click and shows the sample subscriptions; its inbox login is on the page', async ({ page }) => {
+test('the demo account logs in with one click and shows the sample subscriptions; no password or inbox login is on the page', async ({ page }) => {
   await page.goto('/login');
-  await expect(page.getByRole('region', { name: 'Demo' })).toBeVisible();
+  const demo = page.getByRole('region', { name: 'Demo' });
+  await expect(demo).toBeVisible();
   await expect(page.getByLabel('User account')).toContainText('user@demo.subpulse.test');
-  await expect(page.getByLabel('Demo inbox')).toContainText(process.env.DEMO_SMTP_USER);
+  await expect(demo).not.toContainText(process.env.DEMO_PASSWORD);
+  if (process.env.DEMO_SMTP_USER) await expect(demo).not.toContainText(process.env.DEMO_SMTP_USER);
+  await expect(demo).not.toContainText(/ethereal|inbox/i);
   await page.getByRole('button', { name: /Log in as User/ }).click();
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
   await openList(page);

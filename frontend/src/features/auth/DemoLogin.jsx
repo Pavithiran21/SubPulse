@@ -1,4 +1,4 @@
-import { IconAlertCircle, IconExternalLink, IconLoader2, IconMailOpened, IconUserCircle } from '@tabler/icons-react';
+import { IconAlertCircle, IconLoader2, IconUserCircle } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { getDemo } from '../../api/demo';
@@ -7,9 +7,9 @@ import { useAuth } from '../../auth/AuthContext';
 
 /**
  * The "Demo" block under the Log in form: one "Log in as <role>" button per demo account (SubPulse
- * has one role, User), the account's email and password, and the Ethereal inbox its emails go to.
- * The backend answers only when it runs with DEMO_MODE=true; otherwise the request is a 404 and
- * nothing is shown. The password and the inbox login are demo-only, so showing them is on purpose.
+ * has one role, User) and the account's email. The backend answers only when it runs with
+ * DEMO_MODE=true; otherwise the request is a 404 and nothing is shown. No password or inbox login is
+ * shown: the button needs none, and a public page that prints credentials gets flagged as phishing.
  */
 export function DemoLogin() {
   const { demoLogin } = useAuth();
@@ -37,7 +37,7 @@ export function DemoLogin() {
     }
   }
 
-  const { accounts, inbox } = demo.data;
+  const { accounts } = demo.data;
 
   return (
     <section aria-labelledby="demo-title">
@@ -63,7 +63,7 @@ export function DemoLogin() {
           )}
         </button>
       ))}
-      <p className="hint text-center">A demo account with sample subscriptions.</p>
+      <p className="hint text-center">A demo account with sample subscriptions. One click, no password needed.</p>
       {failed && (
         <p className="field-error justify-center" role="alert">
           <IconAlertCircle size={16} aria-hidden="true" /> Couldn't start the demo. Try again.
@@ -75,29 +75,9 @@ export function DemoLogin() {
           <DemoCredentials
             key={account.role}
             label={`${account.role} account`}
-            rows={[
-              ['Email', account.email],
-              ['Password', account.password],
-            ]}
+            rows={[['Email', account.email]]}
           />
         ))}
-        <div className="mt-3 border-t border-line pt-3">
-          <p className="flex items-center gap-1.5 font-semibold text-navy">
-            <IconMailOpened size={16} className="text-brand" aria-hidden="true" /> Demo emails
-          </p>
-          <p className="mt-0.5 text-muted">Reminders for the demo account arrive in this Ethereal test inbox.</p>
-          <DemoCredentials
-            label="Demo inbox"
-            rows={[
-              ['Inbox', inbox.user],
-              ['Password', inbox.pass],
-            ]}
-          />
-          <a href={inbox.url} target="_blank" rel="noreferrer" className="link mt-1.5 inline-flex items-center gap-1">
-            Open the demo inbox <IconExternalLink size={14} aria-hidden="true" />
-            <span className="sr-only">(opens ethereal.email in a new tab)</span>
-          </a>
-        </div>
       </div>
     </section>
   );
@@ -120,7 +100,7 @@ function DemoCredentials({ label, rows }) {
 }
 
 /**
- * At 375 px a long inbox address doesn't fit on one line: let it wrap after the "@" rather than
+ * At 375 px a long address doesn't fit on one line: let it wrap after the "@" rather than
  * mid-word. <wbr> only marks the break; copied text stays exactly the address.
  */
 function BreakAfterAt({ text }) {

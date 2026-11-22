@@ -35,10 +35,12 @@ test.describe('the reminder job endpoint', () => {
 });
 
 test.describe('the demo log-in', () => {
-  test('/api/demo lists the demo account and its inbox; logging in returns a demo user and a cookie', async ({ request }) => {
+  test('/api/demo lists the demo account but never a password or inbox login; logging in returns a demo user and a cookie', async ({ request }) => {
     const info = await json(await request.get(apiUrl('/demo')), 200);
-    expect(info.accounts).toEqual([{ role: 'User', email: 'user@demo.subpulse.test', password: process.env.DEMO_PASSWORD }]);
-    expect(info.inbox).toMatchObject({ url: 'https://ethereal.email/login', user: process.env.DEMO_SMTP_USER });
+    expect(info).toEqual({ accounts: [{ role: 'User', email: 'user@demo.subpulse.test' }] });
+    const raw = JSON.stringify(info);
+    expect(raw).not.toContain(process.env.DEMO_PASSWORD);
+    if (process.env.DEMO_SMTP_PASS) expect(raw).not.toContain(process.env.DEMO_SMTP_PASS);
 
     const response = await request.post(apiUrl('/demo/login'), { data: { role: 'User' } });
     const session = await json(response, 200);
